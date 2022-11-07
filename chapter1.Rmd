@@ -1,7 +1,8 @@
+# IODS2022
 
-# About the project
+*This is an introductiory course to open data science and the open tools commonly used in it.*
 
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
+Link to my GitHub repository: <https://github.com/>jmleppal/IODS-project
 
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
@@ -9,5 +10,9 @@
 date()
 
 ```
-The text continues here.
 
+I went through the R for the Health Data Science and got a some grasp on elementary use of R. All in all, the book is an excellent introduction to this topic.
+
+I'm trying to understand the intestines of GitHub but at the moment it looks to me as a long path of trial and error.
+
+When it comes to R Markdown, working on this visual-mode seems to be easier now in the beginning.
