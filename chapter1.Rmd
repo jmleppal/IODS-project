@@ -1,12 +1,11 @@
 # IODS2022
 
-*This is an introductiory course to open data science and the open tools commonly used in it.*
+*This is an introductory course to open data science and the open tools commonly used in it.*
 
 Link to my GitHub repository: <https://github.com/>jmleppal/IODS-project
 
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
-
 date()
 
 ```
