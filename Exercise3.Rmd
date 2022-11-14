@@ -77,10 +77,10 @@ url_math
 math <- read.table(url_math, sep = ";" , header = TRUE)
 
 # web address for Portuguese class data
-url_por <- paste("replace me!", "student-por.csv", sep = " change me! ")
+url_por <- paste(url, "student-por.csv", sep = "/")
 
 # print out the address
-
+url_por
 
 # read the Portuguese class questionnaire data into memory
 por <- read.table(url_por, sep = ";", header = TRUE)
@@ -133,20 +133,19 @@ Hints:
 library(dplyr)
 
 # give the columns that vary in the two data sets
-free_cols
+free_cols <- c("failures", "paid", "absences", "G1", "G2", "G3")
 
 # the rest of the columns are common identifiers used for joining the data sets
-join_cols <- setdiff(colnames(por), "change me!")
+join_cols <- setdiff(colnames(por), free_cols)
 
 # join the two data sets by the selected identifiers
-math_por <- inner_join(math, por, by = "change me!")
+math_por <- inner_join(math, por, by = join_cols)
 
 # look at the column names of the joined data set
-
+colnames(math_por)
 
 # glimpse at the joined data set
-
-
+glimpse(math_por)
 
 ```
 
@@ -201,13 +200,13 @@ Hint:
 # dplyr, math_por, join_by are available
 
 # print out the column names of 'math_por'
-
+colnames(math_por)
 
 # create a new data frame with only the joined columns
-alc <- select(math_por, all_of("change me!"))
+alc <- select(math_por, all_of(join_cols))
 
 # print out the columns not used for joining (those that varied in the two data sets)
-
+free_cols
 
 # for every column name not used for joining...
 for(col_name in free_cols) {
@@ -224,13 +223,12 @@ for(col_name in free_cols) {
     alc[col_name] <- round(rowMeans(two_cols))
   } else { # else (if the first column vector was not numeric)...
     # add the first column vector to the alc data frame
-    alc[col_name] <- "change me!"
+    alc[col_name] <- first_col
   }
 }
 
 # glimpse at the new combined data
-
-
+glimpse(alc)
 
 ```
 
@@ -270,7 +268,7 @@ library(ggplot2)
 ### Instructions
 - Mutate `alc` by creating the new column `alc_use` by averaging weekday and weekend alcohol consumption.
 - Draw a bar plot of `alc_use`.
-- Define a new asthetic element to the bar plot of `alc_use` by defining `fill = sex`. Draw the plot again.
+- Define a new aesthetic element to the bar plot of `alc_use` by defining `fill = sex`. Draw the plot again.
 - Adjust the code: Mutate `alc` by creating a new column `high_use`, which is true if `alc_use` is greater than 2 and false otherwise.
 - Initialize a ggplot object with `high_use` on the x-axis and then draw a bar plot.
 - Add this element to the latter plot (using `+`): `facet_wrap("sex")`.
@@ -291,19 +289,19 @@ library(dplyr); library(ggplot2)
 alc <- mutate(alc, alc_use = (Dalc + Walc) / 2)
 
 # initialize a plot of alcohol use
-g1 <- ggplot(data = alc, aes(x = alc_use))
+g1 <- ggplot(data = alc, aes(x = alc_use, fill = sex))
 
 # define the plot as a bar plot and draw it
 g1 + geom_bar()
 
 # define a new logical column 'high_use'
-alc <- mutate(alc, high_use = "change me!" > 2)
+alc <- mutate(alc, high_use = alc_use > 2)
 
 # initialize a plot of 'high_use'
-g2 <- ggplot(data = alc)
+g2 <- ggplot(data = alc, aes(x = high_use))
 
 # draw a bar plot of high_use by sex
-
+g2 + geom_bar() + facet_wrap("sex")
 
 ```
 
@@ -346,7 +344,7 @@ Hint:
 library(tidyr); library(dplyr); library(ggplot2)
 
 # glimpse at the alc data
-
+glimpse(alc)
 
 # use gather() to gather columns into key-value pairs and then glimpse() at the resulting data
 gather(alc) %>% glimpse
@@ -355,8 +353,7 @@ gather(alc) %>% glimpse
 gather(alc) %>% View
 
 # draw a bar plot of each variable
-gather(alc) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free")
-
+gather(alc) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar()
 
 ```
 
@@ -407,8 +404,7 @@ Hints:
 library(dplyr); library(ggplot2)
 
 # produce summary statistics by group
-alc %>% group_by(sex) %>% summarise(count = n())
-
+alc %>% group_by(sex, high_use) %>% summarise(count = n(), mean_grade = mean(G3))
 
 ```
 
@@ -449,16 +445,16 @@ Hints:
 library(ggplot2)
 
 # initialize a plot of high_use and G3
-g1 <- ggplot(alc, aes(x = high_use, y = G3))
+g1 <- ggplot(alc, aes(x = high_use, y = G3, col = sex))
 
 # define the plot as a boxplot and draw it
 g1 + geom_boxplot() + ylab("grade")
 
 # initialize a plot of high_use and absences
-
+g2 <- ggplot(alc, aes(x = high_use, y = absences, col = sex))
 
 # define the plot as a box plot and draw it
-
+g2 + geom_boxplot() + ylab("grade") + ggtitle("Student absences by alcohol consumption and sex")
 
 ```
 
@@ -495,13 +491,13 @@ Hint:
 # alc is available 
 
 # find the model with glm()
-m <- glm(high_use ~ failures + absences, data = alc, family = "binomial")
+m <- glm(high_use ~ failures + absences + sex, data = alc, family = "binomial")
 
 # print out a summary of the model
-
+summary(m)
 
 # print out the coefficients of the model
-
+coef(m)
 
 ```
 
@@ -549,7 +545,7 @@ m <- glm(high_use ~ failures + absences + sex, data = alc, family = "binomial")
 OR <- coef(m) %>% exp
 
 # compute confidence intervals (CI)
-
+CI <- confint(m) %>% exp
 
 # print out the odds ratios with their confidence intervals
 cbind(OR, CI)
@@ -605,13 +601,13 @@ library(dplyr)
 alc <- mutate(alc, probability = probabilities)
 
 # use the probabilities to make a prediction of high_use
-alc <- mutate(alc, prediction = "change me!")
+alc <- mutate(alc, prediction = probability > 0.5)
 
 # see the last ten original classes, predicted probabilities, and class predictions
 select(alc, failures, absences, sex, high_use, probability, prediction) %>% tail(10)
 
 # tabulate the target variable versus the predictions
-table(high_use = alc$high_use, prediction = "change me!")
+table(high_use = alc$high_use, prediction = alc$prediction)
 
 
 ```
@@ -655,13 +651,14 @@ Hint:
 library(dplyr); library(ggplot2)
 
 # initialize a plot of 'high_use' versus 'probability' in 'alc'
-g <- ggplot(alc, aes(x = "change me!", y = "change me!"))
+g <- ggplot(alc, aes(x = high_use, y = probability, col = prediction))
 
 # define the geom as points and draw the plot
-
+g + geom_point()
 
 # tabulate the target variable versus the predictions
-table(high_use = alc$high_use, prediction = alc$prediction)
+table(high_use = alc$high_use, prediction = alc$prediction) %>% addmargins
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
 
 
 ```
@@ -711,7 +708,9 @@ loss_func <- function(class, prob) {
 }
 
 # call loss_func to compute the average number of wrong predictions in the (training) data
-loss_func(class = alc$high_use, prob = 0)
+# loss_func(class = alc$high_use, prob = 0)
+# loss_func(class = alc$high_use, prob = 1)
+loss_func(class = alc$high_use, prob = alc$probability)
 
 
 ```
@@ -757,7 +756,7 @@ loss_func <- function(class, prob) {
 }
 
 # compute the average number of wrong predictions in the (training) data
-
+loss_func(class = alc$high_use, prob = alc$probability)
 
 # K-fold cross-validation
 library(boot)
