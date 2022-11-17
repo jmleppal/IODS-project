@@ -139,7 +139,7 @@ free_cols <- c("failures", "paid", "absences", "G1", "G2", "G3")
 join_cols <- setdiff(colnames(por), free_cols)
 
 # join the two data sets by the selected identifiers
-math_por <- inner_join(math, por, by = join_cols)
+math_por <- inner_join(math, por, by = join_cols, suffix = c(".math", ".por"))
 
 # look at the column names of the joined data set
 colnames(math_por)

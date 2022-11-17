@@ -1,0 +1,469 @@
+---
+title: "Logistic regression"
+---
+
+```{r}
+date()
+```
+
+```{r}
+# READING IN THE DATASET
+
+# set the working directory
+ setwd("C:/Users/yona2/Desktop/FT/IODS2022/RStudio/IODS-project/data")
+
+# access the tidyverse library
+ library(tidyverse)
+
+# read the data
+ alc <- read.table("alc.csv", sep = ",", header = TRUE)
+
+# check structure and dimensions
+colnames(alc)
+# glimpse(alc)
+```
+
+The data is based on two surveys concerning student achievement in secondary education in two Portuguese schools. The dataset contains factors related to performances in mathematics and Portuguese language. The variables failures, paid, absences, G1, G2 and G3 present a combined assessment on both subjects. The analyses focus on the relationship between alcohol consumption (alc_use; 1 very low to 5 very high) and other variables. Alcohol use is considered high if it exceeds 2 (high_use).
+
+All in all, there are 36 variables and 370 observations included. No values are missing.
+
+As for primary hypotheses, I would expect going out, failures and absences to be positively and final grade (G3) to be negatively associated with alcohol use.
+
+```{r}
+# EXPLORING THE DATA
+
+# access the GGally and ggplot2 libraries
+library(GGally); library(ggplot2)
+
+# set summary values
+summary(alc[, c(4, 8:9, 14:15, 23:25, 28:29, 31, 34:35)])
+alc %>% group_by(sex) %>% summarise(count= n())
+alc %>% group_by(high_use) %>% summarise(count= n())
+alc %>% group_by(sex, high_use) %>% summarise(count= n())
+
+p1 <- ggpairs(alc[, c(35, 4, 8:9, 14:15, 23:25)], mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)), progress = FALSE)
+p2 <- ggpairs(alc[, c(35, 28:29, 31, 34)], mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)), progress = FALSE)
+p3 <- ggpairs(alc[, c(36, 4, 8:9, 14:15, 23:25)], mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)), progress = FALSE)
+p4 <- ggpairs(alc[, c(36, 28:29, 31, 34:35)], mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)), progress = FALSE)
+p1; p2; p3; p4
+
+# initialize plot with data and aesthetic mapping
+p5 <- ggplot(alc, aes(x = goout, y = alc_use))
+p6 <- ggplot(alc, aes(x = failures, y = alc_use))
+p7 <- ggplot(alc, aes(x = absences, y = alc_use))
+p8 <- ggplot(alc, aes(x = G3, y = alc_use))
+
+# define the visualization type (points) + add a regression line
+# + add a main title and draw the plot
+p9 <- p5 + geom_point() + geom_smooth(method = "lm") + ggtitle("Student's going out versus alcohol use")
+p10 <- p6 + geom_point() + geom_smooth(method = "lm") + ggtitle("Student's failures versus alcohol use")
+p11 <- p7 + geom_point() + geom_smooth(method = "lm") + ggtitle("Student's absences versus alcohol use")
+p12 <- p8 + geom_point() + geom_smooth(method = "lm") + ggtitle("Student's G3 versus alcohol use")
+p9; p10; p11; p12
+
+p13 <- ggpairs(alc[, c(3:4, 25, 29, 31, 34)], mapping = aes(), lower = list(combo = wrap("facethist", bins = 20)), progress = FALSE)
+p13;
+
+```
+
+Out of 370 participants, 175 (47%) are men and 195 (52%) women. The median age is 17 years, ranging from 15 to 22 years. 111 (30%) participants use alcohol in high quantities; 70 (40%) men and 41 (21%) women are high users. The distributions (median, range) of going out (3, 1-5) and final grade (3, 1-5) are reasonably symmetrical but failures (0, 0-3) and absences (3, 0-45) are highly skewed to the right.
+
+As expected, in initial exploration, going out (rho = 0.40), failures (rho = 0.21) and absences (rho = 0.21) are positively and final grade (rho = -0.16) negatively associated with alcohol use. When alcohol use is dichotomized, these relationships seem to become attenuated. On the other hand, going out (rho = -0.15), failures (rho = -0.36) and absences (rho = -0.10) are negatively associated with final grade. Futhermore, going out is positively associated with failures (rho = 0.14) and absences (rho = 0.11).
+
+```{r}
+# BUILDING A LOGISTIC REGRESSION MODEL
+
+# find the model with glm()
+m1 <- glm(high_use ~ age, data = alc, family = "binomial")
+m2 <- glm(high_use ~ sex, data = alc, family = "binomial")
+m3 <- glm(high_use ~ goout, data = alc, family = "binomial")
+m4 <- glm(high_use ~ failures, data = alc, family = "binomial")
+m5 <- glm(high_use ~ absences, data = alc, family = "binomial")
+m6 <- glm(high_use ~ G3, data = alc, family = "binomial")
+
+m7 <- glm(high_use ~ age + sex, data = alc, family = "binomial")
+m8 <- glm(high_use ~ goout + failures + absences + G3, data = alc, family = "binomial")
+m9 <- glm(high_use ~ age + sex + goout + failures + absences, data = alc, family = "binomial")
+m10 <- glm(high_use ~ sex + goout + failures + absences, data = alc, family = "binomial")
+
+# print out a summary of the model
+summary(m1); summary(m2); summary(m3); summary(m4); summary(m5); 
+summary(m6); summary(m7); summary(m8); summary(m9); summary(m10); 
+
+# print out the coefficients of the model
+coef(m1); coef(m2); coef(m3); coef(m4); coef(m5); 
+coef(m6); coef(m7); coef(m8); coef(m9); coef(m10); 
+
+# comparing models
+m82 <- glm(high_use ~ goout + failures + absences, data = alc, family = "binomial")
+anova(m8, m82, test="LRT")
+anova(m9, m10, test="LRT")
+
+# compute odds ratios (OR) and confidence intervals (CI) for the final model
+OR10 <- coef(m10) %>% exp %>% round(digits = 2)
+CI10 <- confint(m10) %>% exp %>% round(digits = 2)
+
+# print out the odds ratios with their confidence intervals
+cbind(OR10, CI10)
+
+```
+
+In univariate logistic regression models, all selected explanatory variables as well as age and sex as demographic factors are statistically significantly associated with high alcohol use. In a multiple regression model, however, final grade and age are not any more significantly associated with high alcohol consumption. Likelihood ratio tests being insignificant also favor leaving them out of the final model. The point estimates of included explanatory variables in the final model are nearly the same as in the respective univariate models.
+
+In the final model, one unit increase in going out increased the odds of using alcohol at high level by 101% (59%-156%), in failures by 63% (4%-159%) and in absences by 9% (4%-14%). Male sex increased the odds (95% CI) by 166% (61%-349%).
+
+```{r}
+# PREDICTIVE ABILITY OF THE FINAL MODEL
+
+## access dplyr and ggplot2
+library(dplyr); library(ggplot2)
+
+# fit the model
+m10 <- glm(high_use ~ sex + goout + failures + absences, data = alc, family = "binomial")
+
+# predict() the probability of high_use
+probabilities <- predict(m10, type = "response")
+
+# add the predicted probabilities to 'alc'
+alc <- mutate(alc, probability = probabilities)
+
+# use the probabilities to make a prediction of high_use
+alc <- mutate(alc, prediction = probability > 0.5)
+
+# tabulate the target variable versus the predictions
+table(high_use = alc$high_use, prediction = alc$prediction) %>% addmargins %>% round(digits = 2)
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins %>% round(digits = 2)
+
+# initialize a plot of 'high_use' versus 'probability' in 'alc'
+g <- ggplot(alc, aes(x = high_use, y = probability, col = prediction))
+
+# define the geom as points and draw the plot
+g + geom_point()
+
+# define a loss function (mean prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# call loss_func to compute the average number of wrong predictions in the (training) data
+loss_func(class = alc$high_use, prob = 0) %>% round(digits = 2)
+loss_func(class = alc$high_use, prob = 1) %>% round(digits = 2)
+loss_func(class = alc$high_use, prob = alc$probability) %>% round(digits = 2)
+
+```
+
+The overall accuracy of the model (i.e., accurate classification) is high: 293 (79%) participants are correctly classified. There is not much difference in the prediction in between the user levels: out of those predicted to be low users of alcohol 243 (80%) are correctly classified whereas out of those predicted to be high users 61 (76%) are truly high users.
+
+The model does increase the predictive performance compared to random guessing: 21% are inaccurately classified by the model, whereas 30% are inaccurately classified by randomly guessing that probability is 0 for all and 70 % by a randomly guessing that probability is 1 for all.
+
+```{r}
+# BONUS SECTION: ON CROSS-VALIDATION
+
+# K-fold cross-validation
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m10, K = nrow(alc) / 10)
+
+# average number of wrong predictions in the cross validation
+cv$delta[1]
+
+```
+
+The final model does have a slightly better test set performance, error being 0.21 compared with the respective error produced by the model in the Exercise Set (0.26).
+
+```{r}
+# SUPER-BONUS SECTION: ON CROSS-VALIDATION
+
+# I'm sure there is a much more elegant way of writing this R code...
+
+# different models and their summaries
+m21 <- glm(high_use ~ age + sex + health + address + famsize + Pstatus + Fedu + Mjob + guardian + school + reason + schoolsup + famsup + paid + activities + nursery + higher + internet + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m21)
+m22 <- glm(high_use ~ age + sex + health + address + famsize + Pstatus + Fedu + Mjob + guardian + school + reason + famsup + paid + activities + nursery + higher + internet + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m22)
+m23 <- glm(high_use ~ age + sex + health + address + famsize + Pstatus + Fedu + Mjob + guardian + school + reason + famsup + paid + activities + nursery + internet + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m23)
+m24 <- glm(high_use ~ age + sex + health + address + famsize + Pstatus + Mjob + guardian + school + reason + famsup + paid + activities + nursery + internet + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m24)
+m25 <- glm(high_use ~ sex + health + address + famsize + Pstatus + Mjob + guardian + school + reason + famsup + paid + activities + nursery + internet + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m25)
+m26 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + school + reason + famsup + paid + activities + nursery + internet + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m26)
+m27 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + school + reason + famsup + paid + activities + nursery + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m27)
+m28 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + school + reason + paid + activities + nursery + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences + G3, data = alc, family = "binomial")
+summary(m28)
+m29 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + school + reason + paid + activities + nursery + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences, data = alc, family = "binomial")
+summary(m29)
+m30 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + reason + paid + activities + nursery + romantic + famrel + studytime + traveltime + freetime + goout + failures + absences, data = alc, family = "binomial")
+summary(m30)
+m31 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + reason + paid + activities + nursery + romantic + famrel + studytime + freetime + goout + failures + absences, data = alc, family = "binomial")
+summary(m31)
+m32 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + reason + paid + activities + nursery + romantic + famrel + studytime + freetime + goout + absences, data = alc, family = "binomial")
+summary(m32)
+m33 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + reason + paid + activities + romantic + famrel + studytime + freetime + goout + absences, data = alc, family = "binomial")
+summary(m33)
+m34 <- glm(high_use ~ sex + health + address + famsize + Mjob + guardian + reason + paid + activities + romantic + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m34)
+m35 <- glm(high_use ~ sex + health + address + famsize + guardian + reason + paid + activities + romantic + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m35)
+m36 <- glm(high_use ~ sex + health + address + guardian + reason + paid + activities + romantic + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m36)
+m37 <- glm(high_use ~ sex + health + address + guardian + reason + paid + activities + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m37)
+m38 <- glm(high_use ~ sex + address + guardian + reason + paid + activities + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m38)
+m39 <- glm(high_use ~ sex + address + guardian + paid + activities + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m39)
+m40 <- glm(high_use ~ sex + address + paid + activities + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m40)
+m41 <- glm(high_use ~ sex + address + paid + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m41)
+m42 <- glm(high_use ~ sex + address + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m42)
+m43 <- glm(high_use ~ sex + famrel + studytime + goout + absences, data = alc, family = "binomial")
+summary(m43)
+m44 <- glm(high_use ~ sex + famrel + goout + absences, data = alc, family = "binomial")
+summary(m44)
+m45 <- glm(high_use ~ sex + goout + absences, data = alc, family = "binomial")
+summary(m45)
+m46 <- glm(high_use ~ sex + goout, data = alc, family = "binomial")
+summary(m46)
+m47 <- glm(high_use ~ goout, data = alc, family = "binomial")
+summary(m47)
+
+# predict() the probabilities of high_use
+prob21 <- predict(m21, type = "response")
+prob22 <- predict(m22, type = "response")
+prob23 <- predict(m23, type = "response")
+prob24 <- predict(m24, type = "response")
+prob25 <- predict(m25, type = "response")
+prob26 <- predict(m26, type = "response")
+prob27 <- predict(m27, type = "response")
+prob28 <- predict(m28, type = "response")
+prob29 <- predict(m29, type = "response")
+prob30 <- predict(m30, type = "response")
+prob31 <- predict(m31, type = "response")
+prob32 <- predict(m32, type = "response")
+prob33 <- predict(m33, type = "response")
+prob34 <- predict(m34, type = "response")
+prob35 <- predict(m35, type = "response")
+prob36 <- predict(m36, type = "response")
+prob37 <- predict(m37, type = "response")
+prob38 <- predict(m38, type = "response")
+prob39 <- predict(m39, type = "response")
+prob40 <- predict(m40, type = "response")
+prob41 <- predict(m41, type = "response")
+prob42 <- predict(m42, type = "response")
+prob43 <- predict(m43, type = "response")
+prob44 <- predict(m44, type = "response")
+prob45 <- predict(m45, type = "response")
+prob46 <- predict(m46, type = "response")
+prob47 <- predict(m47, type = "response")
+
+# add the predicted probabilities to 'alc'
+alc <- mutate(alc, prob21 = prob21)
+alc <- mutate(alc, prob22 = prob22)
+alc <- mutate(alc, prob23 = prob23)
+alc <- mutate(alc, prob24 = prob24)
+alc <- mutate(alc, prob25 = prob25)
+alc <- mutate(alc, prob26 = prob26)
+alc <- mutate(alc, prob27 = prob27)
+alc <- mutate(alc, prob28 = prob28)
+alc <- mutate(alc, prob29 = prob29)
+alc <- mutate(alc, prob30 = prob30)
+alc <- mutate(alc, prob31 = prob31)
+alc <- mutate(alc, prob32 = prob32)
+alc <- mutate(alc, prob33 = prob33)
+alc <- mutate(alc, prob34 = prob34)
+alc <- mutate(alc, prob35 = prob35)
+alc <- mutate(alc, prob36 = prob36)
+alc <- mutate(alc, prob37 = prob37)
+alc <- mutate(alc, prob38 = prob38)
+alc <- mutate(alc, prob39 = prob39)
+alc <- mutate(alc, prob40 = prob40)
+alc <- mutate(alc, prob41 = prob41)
+alc <- mutate(alc, prob42 = prob42)
+alc <- mutate(alc, prob43 = prob43)
+alc <- mutate(alc, prob44 = prob44)
+alc <- mutate(alc, prob45 = prob45)
+alc <- mutate(alc, prob46 = prob46)
+alc <- mutate(alc, prob47 = prob47)
+
+# use the probabilities to make a prediction of high_use
+alc <- mutate(alc, pred21 = prob21 > 0.5)
+alc <- mutate(alc, pred22 = prob22 > 0.5)
+alc <- mutate(alc, pred23 = prob23 > 0.5)
+alc <- mutate(alc, pred24 = prob24 > 0.5)
+alc <- mutate(alc, pred25 = prob25 > 0.5)
+alc <- mutate(alc, pred26 = prob26 > 0.5)
+alc <- mutate(alc, pred27 = prob27 > 0.5)
+alc <- mutate(alc, pred28 = prob28 > 0.5)
+alc <- mutate(alc, pred29 = prob29 > 0.5)
+alc <- mutate(alc, pred30 = prob30 > 0.5)
+alc <- mutate(alc, pred31 = prob31 > 0.5)
+alc <- mutate(alc, pred32 = prob32 > 0.5)
+alc <- mutate(alc, pred33 = prob33 > 0.5)
+alc <- mutate(alc, pred34 = prob34 > 0.5)
+alc <- mutate(alc, pred35 = prob35 > 0.5)
+alc <- mutate(alc, pred36 = prob36 > 0.5)
+alc <- mutate(alc, pred37 = prob37 > 0.5)
+alc <- mutate(alc, pred38 = prob38 > 0.5)
+alc <- mutate(alc, pred39 = prob39 > 0.5)
+alc <- mutate(alc, pred40 = prob40 > 0.5)
+alc <- mutate(alc, pred41 = prob41 > 0.5)
+alc <- mutate(alc, pred42 = prob42 > 0.5)
+alc <- mutate(alc, pred43 = prob43 > 0.5)
+alc <- mutate(alc, pred44 = prob44 > 0.5)
+alc <- mutate(alc, pred45 = prob45 > 0.5)
+alc <- mutate(alc, pred46 = prob46 > 0.5)
+alc <- mutate(alc, pred47 = prob47 > 0.5)
+
+# print column names
+colnames(alc)
+
+# define a loss function (average prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+# compute the average number of wrong predictions in the (training) data
+loss_func(class = alc$high_use, prob = alc$prob21) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob22) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob23) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob24) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob25) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob26) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob27) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob28) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob29) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob30) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob31) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob32) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob33) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob34) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob35) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob36) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob37) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob38) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob39) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob40) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob41) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob42) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob43) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob44) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob45) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob46) %>% round(digits = 3)
+loss_func(class = alc$high_use, prob = alc$prob47) %>% round(digits = 3)
+
+# K-fold cross-validation and average number of wrong predictions in the cross validation
+library(boot)
+cv21 <- cv.glm(data = alc, cost = loss_func, glmfit = m21, K = nrow(alc) / 10)
+cv22 <- cv.glm(data = alc, cost = loss_func, glmfit = m22, K = nrow(alc) / 10)
+cv23 <- cv.glm(data = alc, cost = loss_func, glmfit = m23, K = nrow(alc) / 10)
+cv24 <- cv.glm(data = alc, cost = loss_func, glmfit = m24, K = nrow(alc) / 10)
+cv25 <- cv.glm(data = alc, cost = loss_func, glmfit = m25, K = nrow(alc) / 10)
+cv26 <- cv.glm(data = alc, cost = loss_func, glmfit = m26, K = nrow(alc) / 10)
+cv27 <- cv.glm(data = alc, cost = loss_func, glmfit = m27, K = nrow(alc) / 10)
+cv28 <- cv.glm(data = alc, cost = loss_func, glmfit = m28, K = nrow(alc) / 10)
+cv29 <- cv.glm(data = alc, cost = loss_func, glmfit = m29, K = nrow(alc) / 10)
+cv30 <- cv.glm(data = alc, cost = loss_func, glmfit = m30, K = nrow(alc) / 10)
+cv31 <- cv.glm(data = alc, cost = loss_func, glmfit = m31, K = nrow(alc) / 10)
+cv32 <- cv.glm(data = alc, cost = loss_func, glmfit = m32, K = nrow(alc) / 10)
+cv33 <- cv.glm(data = alc, cost = loss_func, glmfit = m33, K = nrow(alc) / 10)
+cv34 <- cv.glm(data = alc, cost = loss_func, glmfit = m34, K = nrow(alc) / 10)
+cv35 <- cv.glm(data = alc, cost = loss_func, glmfit = m35, K = nrow(alc) / 10)
+cv36 <- cv.glm(data = alc, cost = loss_func, glmfit = m36, K = nrow(alc) / 10)
+cv37 <- cv.glm(data = alc, cost = loss_func, glmfit = m37, K = nrow(alc) / 10)
+cv38 <- cv.glm(data = alc, cost = loss_func, glmfit = m38, K = nrow(alc) / 10)
+cv39 <- cv.glm(data = alc, cost = loss_func, glmfit = m39, K = nrow(alc) / 10)
+cv40 <- cv.glm(data = alc, cost = loss_func, glmfit = m40, K = nrow(alc) / 10)
+cv41 <- cv.glm(data = alc, cost = loss_func, glmfit = m41, K = nrow(alc) / 10)
+cv42 <- cv.glm(data = alc, cost = loss_func, glmfit = m42, K = nrow(alc) / 10)
+cv43 <- cv.glm(data = alc, cost = loss_func, glmfit = m43, K = nrow(alc) / 10)
+cv44 <- cv.glm(data = alc, cost = loss_func, glmfit = m44, K = nrow(alc) / 10)
+cv45 <- cv.glm(data = alc, cost = loss_func, glmfit = m45, K = nrow(alc) / 10)
+cv46 <- cv.glm(data = alc, cost = loss_func, glmfit = m46, K = nrow(alc) / 10)
+cv47 <- cv.glm(data = alc, cost = loss_func, glmfit = m47, K = nrow(alc) / 10)
+
+# average number of wrong predictions in the cross validation
+cv21$delta[1] %>% round(digits = 3)
+cv22$delta[1] %>% round(digits = 3)
+cv23$delta[1] %>% round(digits = 3)
+cv24$delta[1] %>% round(digits = 3)
+cv25$delta[1] %>% round(digits = 3)
+cv26$delta[1] %>% round(digits = 3)
+cv27$delta[1] %>% round(digits = 3)
+cv28$delta[1] %>% round(digits = 3)
+cv29$delta[1] %>% round(digits = 3)
+cv30$delta[1] %>% round(digits = 3)
+cv31$delta[1] %>% round(digits = 3)
+cv32$delta[1] %>% round(digits = 3)
+cv33$delta[1] %>% round(digits = 3)
+cv34$delta[1] %>% round(digits = 3)
+cv35$delta[1] %>% round(digits = 3)
+cv36$delta[1] %>% round(digits = 3)
+cv37$delta[1] %>% round(digits = 3)
+cv38$delta[1] %>% round(digits = 3)
+cv39$delta[1] %>% round(digits = 3)
+cv40$delta[1] %>% round(digits = 3)
+cv41$delta[1] %>% round(digits = 3)
+cv42$delta[1] %>% round(digits = 3)
+cv43$delta[1] %>% round(digits = 3)
+cv44$delta[1] %>% round(digits = 3)
+cv45$delta[1] %>% round(digits = 3)
+cv46$delta[1] %>% round(digits = 3)
+cv47$delta[1] %>% round(digits = 3)
+
+
+# create a new dataset
+err <- data.frame(npredictor = c(1:27), 
+       train = c(0.189, 0.186, 0.184, 0.181, 0.178, 0.186, 0.176, 0.181, 0.178, 0.184, 0.195, 0.200, 0.203, 0.186, 0.200, 0.181, 0.200, 0.200, 0.200, 0.203, 0.197, 0.211, 0.216, 0.200, 0.211, 0.214, 0.270), 
+       test = c(0.259, 0.235, 0.249, 0.235, 0.241, 0.251, 0.232, 0.23, 0.227, 0.227, 0.232, 0.230, 0.227, 0.216, 0.219, 0.219, 0.227, 0.222, 0.222, 0.224, 0.211, 0.224, 0.230, 0.216, 0.219, 0.243, 0.270))
+
+# change the format of dataset
+err_long <- err %>% pivot_longer(cols = c("train", "test"), names_to = "model", values_to = "ploss")
+
+# print dimensions and column names
+dim(err); colnames(err)
+dim(err_long); colnames(err_long)
+
+# access the ggplot2 library
+library(ggplot2)
+
+# Initialize plots with data and aesthetic mapping
+ep1 <- ggplot(err_long, aes(x = npredictor, y = ploss, color = model))
+
+# Define the visualization type (points) + add a regression line
+# + add a main title and draw the plot
+ep2 <- ep1 + geom_point() + geom_smooth(method = "glm", formula = "y ~ poly(x, 2)") + ggtitle("Predictive loss in training and testing")
+ep2
+
+
+# new data for prediction
+errpred <- data.frame(npredictor = c(1:27))
+
+# fits the model
+predm1 <- lm(train ~ npredictor^2, data = err)
+predm2 <- lm(test ~ npredictor^2, data = err)
+
+predm1 <- glm(formula = "train ~ poly(npredictor, 2)", data = err)
+predm2 <- glm(formula = "test ~ poly(npredictor, 2)", data = err)
+
+
+# predicts the values with confidence interval
+predict(predm1, newdata = errpred, interval = 'confidence') %>% round(digits = 3)
+predict(predm2, newdata = errpred, interval = 'confidence') %>% round(digits = 3)
+
+predict(predm1, newdata = errpred, interval = 'confidence') %>% round(digits = 3) %>% summary()
+predict(predm2, newdata = errpred, interval = 'confidence') %>% round(digits = 3) %>% summary()
+
+# summary values for dataset err
+summary(err)
+
+```
+
+In order to compare different logistic regression models, I chose to start with a model with 27 explanatory variables, i.e. nearly all variables that were available. I built 27 different models, reducing the model by one variable at a time, deleting the variable with the highest p-value. In the model with seven explanatory variables - sex, address, paid, family relations, study time, going out and absences - all are statistically significant (p \< 0.05).
+
+The training errors varied from 0.176 to 0.270 and testing errors from 0.211 to 0.270. In the plot, it can be seen that the relationships between the number of the explanatory variables and errors are not linear but more towards 2-degree polynomial. In training, a model with 7 explanatory variables has the smallest error (0.176); in testing, the minimal error (0.211) is with a model with 21 explanatory variables. On the other hand, when these errors are modeled, the smallest error comes with 5-8 explanatory variables in training (0.183) and with 14-17 explanatory variables in testing (0.221). All in all, the errors varied little, implying that the phenomena (high use of alcohol) is indeed multifaceted by nature. In addition, the categorization of some variables does not seem to be statistically optimal and some ordinal variables might be better modeled as categorical ones.
