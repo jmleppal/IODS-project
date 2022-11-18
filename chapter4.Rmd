@@ -1,0 +1,276 @@
+---
+title: "Clustering and classification"
+---
+
+```{r}
+date()
+```
+
+```{r}
+# LOADING THE DATA
+
+# access the MASS package
+library(MASS)
+
+# load the data
+data("Boston")
+
+# define subset of data for boxplots
+box <- dplyr::select(Boston, -tax, -black)
+
+# explore the dataset
+str(Boston)
+summary(Boston)
+
+# plot distributions and matrix of the variables
+boxplot(box)
+boxplot(Boston$tax)
+boxplot(Boston$blac)
+p <- pairs(Boston)
+p
+
+```
+
+The Boston data contain information from 506 towns on factors such as crime rate, residential land, nitrogen oxides concentration, rooms per dwelling, tax rate, pupil-teacher ratio, population status and value of owner-occupied homes. Altogether 14 variables are included. No values are missing.
+
+Variable distributions are mostly skewed. Median age of population is 77.5 years (range 2.9 to 100 years). Crime rate varies from 0.006 to 89.0, tax rate from 187 to 711 per 10,000 $, pupil-teacher ratio from 12.6 to 22.0, proportion of lower population status from 1.7% to 38.0% and nitrogen oxides concentration 0.39 to 0.87 parts per 10 million between towns.
+
+```{r}
+# EXPLORING THE DATA
+
+# access the tidyr and corrplot libraries
+library(tidyr)
+library(corrplot)
+
+# calculate the correlation matrix and round it
+cor_matrix <- cor(Boston) %>% round(digits = 2)
+
+# print the correlation matrix
+cor_matrix 
+
+# visualize the correlation matrix
+corrplot(cor_matrix, method="circle", type = "upper", tl.pos = "d", tl.cex = 0.6)
+
+```
+The variables are mostly correlated with each other, except for the Charles River dummy variable describing if the tract bounds river or not which is correlated only mildly with the median value of owner-occupied homes (rho = 0.18).
+There are remarkably high correlations between age and nitrogen oxides concentration (rho = 0.73) and mean distance to main employment centres (rho = -0.75), between non-retail business acres and nitrogen oxides concentration (rho = 0.76), mean distance to main employment centres (rho = -0.71) and tax rate (rho = 0.72), between average number of rooms per dwelling and median value of owner-occupied homes (rho = 0.70), between accessibility to radial highways and tax rate (rho = 0.91), and between proportion of lower population status and median value of owner-occupied homes (rho = -0.74).
+
+```{r}
+# SCALING THE DATASET AND CREATING 'CRIME' VARIABLE
+
+# accessing library dplyr
+library(dplyr)
+
+# center and standardize variables
+boston_scaled <- scale(Boston)
+
+# summaries of the scaled variables
+summary(boston_scaled)
+
+# plot distributions
+boxplot(boston_scaled)
+
+# class of the boston_scaled object
+class(boston_scaled)
+
+# change the object to data frame
+boston_scaled <- scale(Boston) %>% as.data.frame
+
+# summary of the scaled crime rate
+summary(boston_scaled$crim)
+
+# create a quantile vector of crim and print it
+bins <- quantile(boston_scaled$crim)
+bins
+
+# create a categorical variable 'crime'
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE)
+
+# look at the table of the new factor crime
+table(crime)
+
+# remove original crim from the dataset
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+
+# add the new categorical value to scaled data
+boston_scaled <- data.frame(boston_scaled, crime)
+
+```
+Scaling removes most of the skewness in variables.
+
+```{r}
+# LINEAR DISCRIMINANT ANALYSIS
+
+# number of rows in the Boston dataset 
+n <- nrow(boston_scaled)
+
+# choose randomly 80% of the rows
+ind <- sample(n,  size = n * 0.8)
+
+# create train set
+train <- boston_scaled[ind,]
+
+# create test set 
+test <- boston_scaled[-ind,]
+
+# save the correct classes from test data
+correct_classes <- test$crime
+
+# remove the crime variable from test data
+test <- dplyr::select(test, -crime)
+
+# linear discriminant analysis
+lda.fit <- lda(crime ~ ., data = train)
+
+# print the lda.fit object
+lda.fit
+
+# the function for lda biplot arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+# target classes as numeric
+classes <- as.numeric(train$crime)
+
+# plot the lda results
+plot(lda.fit, dimen = 2, col = classes, pch = classes)
+lda.arrows(lda.fit, myscale = 2)
+
+```
+In linear discriminant analysis, the highest crime class almost solely occupies one cluster and the other crime classes are mixed in the other cluster. The most influential line separators seem to be accessibility to radial highways, proportion of residential land zoned for lots over 2323 m2 and nitrogen oxides concentration, most likely implying differences between rural and urban environments. The first discriminant function separates 94.7% of the population.
+
+```{r}
+# PREDICTING WITH THE LDA MODEL
+
+# predict classes with test data
+lda.pred <- predict(lda.fit, newdata = test)
+
+# cross tabulate the results
+table(correct = correct_classes, predicted = lda.pred$class) %>% addmargins
+
+```
+
+The LDA model works reasonably well: it correctly predicts the crime class in 69 (68%) towns.
+
+```{r}
+# DISTANCES AND CLUSTERING
+
+# access library ggplot2
+library(ggplot2)
+
+# scale dataset
+boston_scaled2 <- data.frame(scale(Boston))
+
+# euclidean distance matrix
+dist_eu <- dist(boston_scaled2)
+
+# look at the summary of the distances
+summary(dist_eu)
+
+# manhattan distance matrix
+dist_man <- dist(boston_scaled2, method = "manhattan")
+
+# look at the summary of the distances
+summary(dist_man)
+
+# k-means clustering
+km <- kmeans(boston_scaled2, centers = 3)
+
+# plot the Boston dataset with clusters
+pairs(boston_scaled2, col = km$cluster)
+pairs(boston_scaled2[1:7], col = km$cluster)
+pairs(boston_scaled2[8:14], col = km$cluster)
+
+set.seed(123)
+
+# determine the number of clusters
+k_max <- 10
+
+# calculate the total within sum of squares
+twcss <- sapply(1:k_max, function(k){kmeans(boston_scaled2, k)$tot.withinss})
+
+# visualize the results
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+
+# k-means clustering
+km <- kmeans(boston_scaled2, centers = 2)
+
+# plot the Boston dataset with clusters
+pairs(boston_scaled2, col = km$cluster)
+pairs(boston_scaled2[1:7], col = km$cluster)
+pairs(boston_scaled2[8:14], col = km$cluster)
+
+```
+Scaling reduces the distances and skewness of their distribution. For k-means clustering, 2 centers seem to be the best choice.
+One cluster seem to be associated with low crime rate, low proportion of non-retail business acres, low nitrogen oxides concentration, younger age, high mean distance to main employment centres, low accessibility to radial highways, low tax rate, high difference in race proportions and high median value of owner-occupied homes. This may refer to that clustering identifies rural areas or otherwise less densely populated areas vs. urban areas.
+
+```{r}
+# BONUS SECTION: MORE ON K-MEANS CLUSTERING AND LINEAR DISCRIMINANT ANALYSIS
+
+# k-means clustering
+km2 <- kmeans(boston_scaled2, centers = 6)
+
+# plot the Boston dataset with clusters
+pairs(boston_scaled2, col = km2$cluster)
+pairs(boston_scaled2[1:7], col = km2$cluster)
+pairs(boston_scaled2[8:14], col = km2$cluster)
+
+
+# linear discriminant analysis
+lda.fit2 <- lda(km2$cluster ~ ., data = boston_scaled2)
+
+# print the lda.fit object
+lda.fit2
+
+# the function for lda biplot arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+# plot the lda results
+plot(lda.fit2, dimen = 2, col = km2$cluster, pch = km2$cluster)
+lda.arrows(lda.fit2, myscale = 2)
+
+```
+Linear discriminant analysis produces three clusters, in which one cluster is occupied by k-means cluster 1, another by k-means cluster 3, and the third cluster contains the rest k-means clusters. The most influential line separators seem to be accessibility to radial highways and Charles River dummy variable. The first discriminant function separates 62.9% and the second one 25.9% of the towns.
+
+```{r}
+# SUPER-BONUS SECTION: 3D PLOTTING
+
+# access library plotly
+library(plotly)
+
+# define a new object
+model_predictors <- dplyr::select(train, -crime)
+
+# check the dimensions
+dim(model_predictors)
+dim(lda.fit$scaling)
+
+# matrix multiplication
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+
+# k-means clustering
+km3 <- kmeans(matrix_product, centers = 2)
+km4 <- km3$cluster 
+
+# Create 3D plot
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers')
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = train$crime)
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = km4)
+
+```
+
+The first matrix plot shows two clusters that are well separated from each other. In the second plot, one cluster is mainly occupied by the highest crime class. In the third plot, the clusters coincide fully with the k-means clustering with two centers.
