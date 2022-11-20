@@ -1,0 +1,163 @@
+---
+title: "Dimensionality reduction techniques"
+---
+
+```{r}
+knitr::opts_chunk$set(message = FALSE)
+date()
+```
+
+```{r}
+# BRING IN THE DATA
+
+# access packages readr and dplyr
+library(readr); library(dplyr)
+
+# Set the working directory
+setwd("C:/Users/yona2/Desktop/FT/IODS2022/RStudio/IODS-project/data")
+
+human <- read.csv("human.csv")
+
+# add countries as rownames
+rownames(human) <- human$X
+
+# remove the Country variable
+human <- select(human, -X)
+
+
+# EXPLORING THE DATA
+
+# Access GGally and corrplot
+library(GGally)
+library(corrplot)
+
+# visualize the variables
+p <- ggpairs(human, progress = FALSE) # for some reason ggpairs produces error in knitting...
+p
+
+# compute the correlation matrix and visualize it with corrplot
+cor(human) %>% round(digits = 3)
+
+```
+Distributions of the variables are mostly rather skewed and the scales vary much from ONE variable to another. The variables are reasonably highly correlated with each other, except for labor participation ratio between genders (jobratio) and parliament representation (propparl) which correlated least with the other factors.
+
+```{r}
+# PRINCIPAL COMPONENT ANALYSIS
+
+# perform principal component analysis (with the SVD method)
+pca <- prcomp(human)
+
+# summary of pca
+summary(pca)
+
+# draw a biplot of the principal component representation and the original variables
+biplot(pca, choices = 1:2, col = c("grey40", "deeppink2"), cex = c(0.8, 1))
+
+```
+
+```{r}
+# standardize the variables
+human_std <- scale(human)
+
+# print out summaries of the standardized variables
+summary(human_std)
+
+# compute the correlation matrix and visualize it with corrplot
+cor(human_std) %>% round(digits = 3)
+
+# perform principal component analysis (with the SVD method)
+pca_std <- prcomp(human_std)
+
+# summary of pca
+summary(pca_std)
+
+# draw a biplot of the principal component representation and the original variables
+biplot(pca_std, choices = 1:2, col = c("grey40", "deeppink2"), cex = c(0.8, 1))
+
+```
+As expected, scaling reduces variances. Without scaling, PCA produces components the first of which seems to explain nearly all of the variation in the dataset and is occupied solely with GNI which has the largest variance among the variables. After scaling, PCA produces components the first four of which cumulatively explain 87% of the variation in the data. The arrows present nicely the observed correlations between variables.
+
+```{r}
+# create and print out a summary of pca_std
+s <- summary(pca_std)
+
+# rounded percentanges of variance captured by each PC
+pca_pr <- round(100*s$importance[2, ], digits = 1)
+
+# print out the percentages of variance
+pca_std
+pca_pr
+
+# create object pc_lab to be used as axis labels...
+paste0(names(pca_pr), " (", pca_pr, "%)")
+
+# create object pc_lab2 to be used as axis labels
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+lbl <- c("Underdevelopment level:", "Gender equality:", "", "", "", "", "", "")
+pc_lab2 <- paste0(lbl, " ", pc_lab)
+
+# draw a biplot again
+biplot(pca_std, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab2[1], ylab = pc_lab2[2])
+
+```
+The PC1 seems to be associated with the development level of the country: the main variables affecting it are maternal mortality rate, adolescent birth rate, life expectancy and expected years in secondary education. On the other hand, the PC2 seems to reflect gender inequality being mainly affected by labor ratio of genders and the parliamentary representation. It seems that the ratio of secondary education between genders is for some reason more related to the development level of a country than gender equality reflected in the labor market and governing.
+
+```{r}
+# MULTIPLE CORRESPONDENCE ANALYSIS
+
+# accessing libraries dplyr, tidyr and ggplot2
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# load tea data
+ tea_time <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea_time.csv", 
+                       sep = ",", header = T)
+
+# create a numerical version of tea data
+tea_timen <- tea_time
+tea_timen$Tea[tea_timen$Tea == "black"] <- 1
+tea_timen$Tea[tea_timen$Tea == "Earl Grey"] <- 2
+tea_timen$Tea[tea_timen$Tea == "green"] <- 3
+tea_timen$How[tea_timen$How == "alone"] <- 1
+tea_timen$How[tea_timen$How == "lemon"] <- 2
+tea_timen$How[tea_timen$How == "milk"] <- 3
+tea_timen$How[tea_timen$How == "other"] <- 4
+tea_timen$how[tea_timen$how == "tea bag"] <- 1
+tea_timen$how[tea_timen$how == "tea bag+unpackaged"] <- 2
+tea_timen$how[tea_timen$how == "unpackaged"] <- 3
+tea_timen$sugar[tea_timen$sugar == "sugar"] <- 1
+tea_timen$sugar[tea_timen$sugar == "No.sugar"] <- 2
+tea_timen$where[tea_timen$where == "chain store"] <- 1
+tea_timen$where[tea_timen$where == "chain store+tea shop"] <- 2
+tea_timen$where[tea_timen$where == "tea shop"] <- 3
+tea_timen$lunch[tea_timen$lunch == "lunch"] <- 1
+tea_timen$lunch[tea_timen$lunch == "Not.lunch"] <- 2
+
+tea_timen <- as.data.frame(apply(tea_timen, 2, as.numeric))
+
+# look at the summaries and structure of the data
+str(tea_time)
+summary(tea_time)
+str(tea_timen)
+summary(tea_timen)
+
+# visualize the dataset
+pivot_longer(tea_time, cols = everything()) %>% 
+  ggplot(aes(value)) + facet_wrap("name", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+p <- ggpairs(tea_timen, progress = FALSE)
+p
+
+# multiple correspondence analysis
+library(FactoMineR)
+mca <- MCA(tea_time[, 1:5], graph = FALSE)
+
+# summary of the models
+summary(mca)
+
+# visualize MCA
+plot(mca, invisible=c("ind"), habillage = "quali", graph.type = "classic")
+
+```
+The tea_time variables are rather weekly associated with each other. The only exception is the association between how tea is used/purchased (as a tea bag or unpacked) and where it is bought (from a chain store or a tea shop). In the MCA factor map, the classes stay mostly close to the origo implying that very much distinction cannot be found based on these variables. Yet, it hints that some users tend to use their tea as green bought unpackaged from a tea shop, some like their tea as Earl Grey (bought as tea bags from chain stores) with sugar and milk and some like it black with lemon and no sugar. The classes 'other' and 'chain store + tea shop' and 'tea bag + unpackaged' seem to be distinctive from others but are rather impossible to interpret due to their mixed natures.
+
