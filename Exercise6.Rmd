@@ -126,8 +126,7 @@ BPRSL <-  pivot_longer(BPRS, cols = -c(treatment, subject),
           arrange(weeks) #order by weeks variable
 
 # Extract the week number
-BPRSL <-  BPRSL %>% 
-            mutate(week = as.integer(substr(weeks, 5, 5)))
+BPRSL <-  BPRSL %>% mutate(week = as.integer(substr(weeks, 5, 5)))
 
 # Take a glimpse at the BPRSL data
 glimpse(BPRSL)
@@ -436,17 +435,17 @@ library(dplyr)
 library(tidyr)
 # Add the baseline from the original data as a new variable to the summary data
 BPRSL8S2 <- BPRSL8S %>%
-  mutate(baseline = BPRS$week0)
+  mutate(baseline = BPRS$week0) %>%
+  filter(mean < 60)
 
 # Fit the linear model with the mean as the response 
 fit <- lm(mean ~ baseline + treatment, data = BPRSL8S2)
-fit
+summary(fit)
 
 # Compute the analysis of variance table for the fitted model with anova()
 anova(fit)
 
 ```
-
 
 ## 6.8 Meet and Repeat: PART II
 
