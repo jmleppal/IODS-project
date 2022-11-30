@@ -39,7 +39,7 @@ p
 cor(human) %>% round(digits = 3)
 
 ```
-Distributions of the variables are mostly rather skewed and the scales vary much from ONE variable to another. The variables are reasonably highly correlated with each other, except for labor participation ratio between genders (jobratio) and parliament representation (propparl) which correlated least with the other factors.
+Distributions of the variables are rather skewed and the scales vary much from one variable to another. The variables are reasonably highly correlated with each other, except for labor participation ratio between genders (jobratio) and parliament representation (propparl) which correlated least with the other factors.
 
 ```{r}
 # PRINCIPAL COMPONENT ANALYSIS
@@ -159,5 +159,5 @@ summary(mca)
 plot(mca, invisible=c("ind"), habillage = "quali", graph.type = "classic")
 
 ```
-The tea_time variables are rather weekly associated with each other. The only exception is the association between how tea is used/purchased (as a tea bag or unpacked) and where it is bought (from a chain store or a tea shop). In the MCA factor map, the classes stay mostly close to the origo implying that very much distinction cannot be found based on these variables. Yet, it hints that some users tend to use their tea as green bought unpackaged from a tea shop, some like their tea as Earl Grey (bought as tea bags from chain stores) with sugar and milk and some like it black with lemon and no sugar. The classes 'other' and 'chain store + tea shop' and 'tea bag + unpackaged' seem to be distinctive from others but are rather impossible to interpret due to their mixed natures.
+The tea_time variables are rather weakly associated with each other. The only exception is the association between how tea is used/purchased (as a tea bag or unpacked) and where it is bought (from a chain store or a tea shop). In the MCA factor map, the classes stay mostly close to the origo implying that very much distinction cannot be found based on these variables. Yet, it hints that some users tend to use their tea as green bought unpackaged from a tea shop, some like their tea as Earl Grey (bought as tea bags from chain stores) with sugar and milk and some like it black with lemon and no sugar. The classes 'other' and 'chain store + tea shop' and 'tea bag + unpackaged' seem to be distinctive from others but are rather impossible to interpret due to their mixed natures.
 
