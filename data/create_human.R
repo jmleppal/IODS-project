@@ -67,6 +67,64 @@ glimpse(human)
 # Set the working directory
 setwd("C:/Users/yona2/Desktop/FT/IODS2022/RStudio/IODS-project/data")
 
-write.csv(human, file = "human.csv", row.names = FALSE)
+write.csv(human, "human.csv")
 
-  
+
+# READ THE SAVED DATASET
+
+# access packages readr and dplyr
+library(readr); library(dplyr)
+
+# Set the working directory
+setwd("C:/Users/yona2/Desktop/FT/IODS2022/RStudio/IODS-project/data")
+
+human <- read.csv("human.csv")
+
+
+# FORM THE ANALYSIS DATASET
+
+# access the stringr package (part of `tidyverse`)
+library(stringr)
+
+# look at the structure of the GNI column in 'human'
+str(human$GNI)
+
+# remove the commas from GNI and print out a numeric version of it
+human$GNI <- str_replace(human$GNI, pattern=",", replace ="") %>% as.numeric
+
+
+# check column names
+names(human)
+
+# columns to keep
+keep <- c("country", "edu2ratio", "jobratio", "explife", "expyrsed", "GNI", "MMR", "ABR", "propparl")
+
+# select the 'keep' columns
+human <- select(human, keep)
+
+# print out a completeness indicator of the 'human' data
+comp <- complete.cases(human)
+
+# print out the data along with a completeness indicator as the last column
+data.frame(human[-1], comp = "TRUE")
+
+# filter out all rows with NA values
+human_ <- filter(human, comp == "TRUE")
+
+
+# look at the last 10 observations of human
+tail(human_, n = 10)
+
+# define the last indice we want to keep
+last <- nrow(human_) - 7
+
+# choose everything until the last 7 observations
+human_ <- human_[1:last, ]
+
+# add countries as rownames
+rownames(human_) <- human_$country
+
+# remove the Country variable
+human_ <- select(human_, -country)
+
+write.csv(human_, "human.csv")
