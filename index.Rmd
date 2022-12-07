@@ -53,5 +53,21 @@ output:
 
 ------------------------------------------------------------------------
 
+# Analysis of longitudinal data
+
+```{r child = "chapter6.Rmd"}
+# This will include Chapter 6 (that is updated in its own file) in the document.
+```
+
+------------------------------------------------------------------------
+
+# Lessons learned
+
+```{r child = "chapter7.Rmd"}
+# This will include Chapter 7 (that is updated in its own file) in the document.
+```
+
+------------------------------------------------------------------------
+
 
 
